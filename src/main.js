@@ -144,54 +144,20 @@ async function scrollPage(driver) {
     try {
         Logger.debug('准备滑动页面');
         const container = await getItemContainer(driver);
-        const bounds = await container.getAttribute('bounds');
 
-        // 解析边界值
-        const [x1, y1, x2, y2] = bounds.replace(/[\[\]]/g, '').split(',').map(Number);
+        const result = await driver.execute('mobile: scrollGesture', {
+            elementId: container.elementId,
+            direction: 'up',
+            percent: 0.6
+        });
 
-        // 确保所有值都是有效的数字
-        if ([x1, y1, x2, y2].some(isNaN)) {
-            throw new Error(`无效的边界值: ${bounds}`);
+        if (result) {
+            Logger.success('页面滑动完成');
+        } else {
+            Logger.warn('滑动操作未触发，可能已到达页面底部');
         }
 
-        // 计算滑动起点和终点
-        const startX = Math.floor(x1 + (x2 - x1) / 2);  // 容器水平中点
-        const viewportHeight = y2 - y1;
-        const startY = Math.floor(y1 + (viewportHeight * 0.8));  // 从底部往上 20% 处开始
-        const endY = Math.floor(y1 + (viewportHeight * 0.2));    // 滑动到顶部往下 20% 处
-
-        Logger.debug(`容器边界: x1=${x1}, y1=${y1}, x2=${x2}, y2=${y2}`);
-        Logger.debug(`滑动参数: startX=${startX}, startY=${startY}, endY=${endY}`);
-
-        // 执行滑动
-        await driver.touchPerform([
-            {
-                action: 'press',
-                options: {
-                    x: startX,
-                    y: startY
-                }
-            },
-            {
-                action: 'wait',
-                options: {
-                    ms: 800
-                }
-            },
-            {
-                action: 'moveTo',
-                options: {
-                    x: startX,
-                    y: endY
-                }
-            },
-            {
-                action: 'release'
-            }
-        ]);
-
-        await driver.pause(1500);
-        Logger.success('页面滑动完成');
+        await driver.pause(1500); // 等待页面稳定
     } catch (error) {
         Logger.error('页面滑动失败', error);
         throw error;
