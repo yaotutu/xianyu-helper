@@ -18,9 +18,24 @@ const wdOpts = {
 async function runTest() {
     const driver = await remote(wdOpts);
     try {
-        const batteryItem = await driver.$('//*[@text="锁屏"]');
-        await batteryItem.click();
+        // 获取屏幕尺寸
+        const screenSize = await driver.getWindowSize();
+        console.log(screenSize);
+        await driver.pause(2000); // 等待2秒，确保会话已完全建立
+
+        // 滑动屏幕：从 x=500, y=1500 滑动到 x=500, y=500
+        driver.touchPerform([
+            { action: 'press', options: { x: 100, y: 250 } },
+            { action: 'moveTo', options: { x: 300, y: 100 } },
+            { action: 'release' }
+        ]);
+
+        await driver.deleteSession();
+
+    } catch (error) {
+        console.error(error);
     } finally {
+        // 延迟并删除会话
         await driver.pause(1000);
         await driver.deleteSession();
     }
