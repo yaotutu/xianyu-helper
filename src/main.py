@@ -8,8 +8,15 @@ import os
 import time
 import traceback
 
+# 应用配置
 XIANYU_PACKAGE = 'com.taobao.idlefish'
 XIANYU_ACTIVITY = '.maincontainer.activity.MainFrameworkActivity'
+
+# 搜索配置
+SEARCH_CONFIG = {
+    'keywords': ['c​h​i​i​k​a​w​a', '奇卡瓦'],  # 在这里添加要匹配的关键词，支持多个关键词
+    'case_sensitive': False,  # 是否区分大小写
+}
 
 # 定义关键元素选择器
 SELECTORS = {
@@ -155,12 +162,19 @@ class XianyuAutomation:
 
     def is_title_match(self, title: str) -> bool:
         """检查标题是否匹配搜索条件"""
-        is_match = 'chiikawa' in title
-        if is_match:
-            Logger.success(f'标题匹配成功: {title}')
+        if not SEARCH_CONFIG['case_sensitive']:
+            title = title.lower()
+            keywords = [k.lower() for k in SEARCH_CONFIG['keywords']]
         else:
-            Logger.debug(f'标题不匹配: {title}')
-        return is_match
+            keywords = SEARCH_CONFIG['keywords']
+
+        for keyword in keywords:
+            if keyword in title:
+                Logger.success(f'标题匹配成功: {title} (匹配关键词: {keyword})')
+                return True
+        
+        Logger.debug(f'标题不匹配: {title}')
+        return False
 
     async def scroll_page(self):
         """滚动页面"""
