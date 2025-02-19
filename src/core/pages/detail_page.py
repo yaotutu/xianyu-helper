@@ -2,20 +2,16 @@ from appium.webdriver.common.appiumby import AppiumBy
 from .base_page import BasePage
 
 class DetailPage(BasePage):
-    # 页面特征元素
+    # 页面特征元素 - 只使用已确认的元素
     IDENTIFIERS = [
-        (AppiumBy.ID, "com.taobao.idlefish:id/detail_title"),
-        (AppiumBy.ID, "com.taobao.idlefish:id/price_view"),
+        (AppiumBy.XPATH, "//android.view.View[@content-desc='卖同款, 卖同款']"),
+        (AppiumBy.XPATH, "//android.view.View[@content-desc='我想要, 我想要']")
     ]
 
-    # 页面元素定位器
+    # 页面元素定位器 - 只保留已确认的元素
     LOCATORS = {
-        'title': (AppiumBy.ID, "com.taobao.idlefish:id/detail_title"),
-        'price': (AppiumBy.ID, "com.taobao.idlefish:id/price_view"),
-        'description': (AppiumBy.ID, "com.taobao.idlefish:id/description"),
-        'contact_button': (AppiumBy.ID, "com.taobao.idlefish:id/contact_seller"),
-        'favorite_button': (AppiumBy.ID, "com.taobao.idlefish:id/favorite"),
-        'back_button': (AppiumBy.ID, "com.taobao.idlefish:id/back"),
+        'sell_similar': (AppiumBy.XPATH, "//android.view.View[@content-desc='卖同款, 卖同款']"),
+        'want_item': (AppiumBy.XPATH, "//android.view.View[@content-desc='我想要, 我想要']")
     }
 
     async def get_item_info(self):
@@ -40,4 +36,12 @@ class DetailPage(BasePage):
 
     async def go_back(self):
         """返回上一页"""
-        return await self.click_element(self.LOCATORS['back_button']) 
+        return await self.click_element(self.LOCATORS['back_button'])
+    
+    async def sell_similar_item(self):
+        """点击卖同款"""
+        return await self.click_element(self.LOCATORS['sell_similar'])
+    
+    async def want_this_item(self):
+        """点击我想要"""
+        return await self.click_element(self.LOCATORS['want_item']) 

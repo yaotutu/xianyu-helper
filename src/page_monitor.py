@@ -10,12 +10,14 @@ from config.app_config import APPIUM_CONFIG
 from core.pages.page_factory import PageFactory
 from core.pages.home_page import HomePage
 from core.pages.city_service_page import CityServicePage
+from core.pages.detail_page import DetailPage
 
 class PageMonitor:
     def __init__(self):
         self.driver = None
         self.page_factory = None
         self.running = True
+        self._last_page_type = None
 
     async def setup(self):
         """初始化 Appium"""
@@ -35,6 +37,7 @@ class PageMonitor:
             self.page_factory = PageFactory(self.driver)
             self.page_factory.register_page(HomePage, HomePage.IDENTIFIERS)
             self.page_factory.register_page(CityServicePage, CityServicePage.IDENTIFIERS)
+            self.page_factory.register_page(DetailPage, DetailPage.IDENTIFIERS)
             
             return True
         except Exception as e:
@@ -43,8 +46,9 @@ class PageMonitor:
 
     def stop(self):
         """停止监控"""
-        self.running = False
-        Logger.info('正在停止监控...')
+        if self.running:
+            self.running = False
+            Logger.info('正在停止监控...')
 
     async def cleanup(self):
         """清理资源"""
@@ -63,16 +67,26 @@ class PageMonitor:
             Logger.info('提示：按 Ctrl+C 停止监控')
             
             while self.running:
-                current_page = await self.page_factory.get_current_page()
-                
-                if isinstance(current_page, HomePage):
-                    Logger.info('当前页面: 首页')
-                elif isinstance(current_page, CityServicePage):
-                    Logger.info('当前页面: 城市服务页面')
-                else:
-                    Logger.warn('当前页面: 未知页面')
-                
-                await asyncio.sleep(5)  # 每5秒检查一次
+                try:
+                    current_page = await self.page_factory.get_current_page()
+                    current_type = type(current_page) if current_page else None
+                    
+                    # 只在页面类型发生变化时输出日志
+                    if current_type != self._last_page_type:
+                        if isinstance(current_page, HomePage):
+                            Logger.info('当前页面: 首页')
+                        elif isinstance(current_page, CityServicePage):
+                            Logger.info('当前页面: 城市服务页面')
+                        elif isinstance(current_page, DetailPage):
+                            Logger.info('当前页面: 商品详情页')
+                        else:
+                            Logger.debug('当前页面: 未知页面')
+                        self._last_page_type = current_type
+                    
+                    await asyncio.sleep(1)  # 缩短检查间隔，提高响应性
+                except Exception as e:
+                    Logger.error('页面检查出错', e)
+                    await asyncio.sleep(1)
 
         except asyncio.CancelledError:
             Logger.info('监控被取消')
@@ -85,7 +99,6 @@ async def main():
     monitor = PageMonitor()
     
     def signal_handler():
-        Logger.info('收到中断信号')
         monitor.stop()
     
     if not await monitor.setup():

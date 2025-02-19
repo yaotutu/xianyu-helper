@@ -21,31 +21,48 @@ class PageFactory:
 
     async def get_current_page(self):
         """识别当前页面并返回对应的页面对象"""
+        # 首先检查当前页面是否仍然有效
+        if self.current_page:
+            page = self._get_page_instance(self.current_page.__class__)
+            # 只检查第一个标识符，提高效率
+            first_identifier = self._page_identifiers[self.current_page.__class__][0]
+            try:
+                if await page.is_element_present(first_identifier, timeout=1):
+                    return self.current_page
+            except Exception:
+                pass
+
+        # 如果当前页面无效，则检查所有已注册的页面
         Logger.debug("开始识别当前页面...")
         
         for page_class, identifiers in self._page_identifiers.items():
-            Logger.debug(f"检查是否为 {page_class.__name__}...")
+            if not identifiers:
+                continue
+                
+            page = self._get_page_instance(page_class)
+            # 只检查第一个标识符
+            first_identifier = identifiers[0]
             
-            for locator in identifiers:
-                try:
-                    page = self._get_page_instance(page_class)
-                    Logger.debug(f"检查特征元素: {locator}")
-                    if await page.is_element_present(locator, timeout=2):
-                        Logger.debug(f"✓ 找到特征元素: {locator}")
-                    else:
-                        Logger.debug(f"✗ 未找到特征元素: {locator}")
-                        break
-                except Exception as e:
-                    Logger.debug(f"检查特征元素出错: {locator}, 错误: {str(e)}")
-                    break
-            else:
-                # 所有特征元素都找到了
-                if self.current_page != page:
-                    Logger.info(f"页面切换: {page_class.__name__}")
-                    self.current_page = page
-                return page
+            try:
+                if await page.is_element_present(first_identifier, timeout=1):
+                    # 如果找到第一个标识符，再检查其他标识符
+                    all_present = True
+                    for locator in identifiers[1:]:
+                        if not await page.is_element_present(locator, timeout=1):
+                            all_present = False
+                            break
+                    
+                    if all_present:
+                        if self.current_page != page:
+                            Logger.info(f"页面切换: {page_class.__name__}")
+                            self.current_page = page
+                        return page
+            except Exception as e:
+                Logger.debug(f"检查页面 {page_class.__name__} 时出错: {str(e)}")
+                continue
         
-        Logger.warn("无法识别当前页面")
+        self.current_page = None
+        Logger.debug("无法识别当前页面")
         return None
 
     def _get_page_instance(self, page_class):
