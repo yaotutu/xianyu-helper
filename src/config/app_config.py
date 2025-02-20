@@ -1,6 +1,6 @@
 # 应用配置
 XIANYU_PACKAGE = 'com.taobao.idlefish'
-XIANYU_ACTIVITY = '.maincontainer.activity.MainFrameworkActivity'
+XIANYU_ACTIVITY = 'com.taobao.fleamarket.home.activity.InitActivity'
 
 # 搜索配置
 SEARCH_CONFIG = {
