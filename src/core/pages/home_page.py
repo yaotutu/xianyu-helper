@@ -1,5 +1,7 @@
 from appium.webdriver.common.appiumby import AppiumBy
+from selenium.common.exceptions import StaleElementReferenceException
 from .base_page import BasePage
+import asyncio
 
 class HomePage(BasePage):
     # 页面特征元素
@@ -34,6 +36,88 @@ class HomePage(BasePage):
         """点击搜索框"""
         return await self.click_element(self.LOCATORS['search_box'])
 
-    async def get_item_container(self):
-        """获取商品列表容器"""
-        return await self.wait_for_element(self.LOCATORS['item_container']) 
+    async def get_items(self, container, max_retries=3):
+        """获取商品列表，带重试机制
+        
+        Args:
+            container: 商品列表容器元素
+            max_retries: 最大重试次数
+            
+        Returns:
+            list: 商品元素列表
+        """
+        for attempt in range(max_retries):
+            try:
+                # 确保容器可见
+                if not container.is_displayed():
+                    return []
+                
+                # 获取商品列表
+                items = container.find_elements(
+                    by=AppiumBy.CLASS_NAME,
+                    value="android.widget.FrameLayout"  # 直接使用类名而不是从配置读取
+                )
+                
+                # 过滤出可见的商品
+                visible_items = [
+                    item for item in items 
+                    if item.is_displayed()
+                ]
+                
+                return visible_items
+                
+            except StaleElementReferenceException:
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(1)
+                    # 重新获取容器
+                    container = await self.wait_for_element(self.LOCATORS['item_container'])
+                    if not container:
+                        return []
+                continue
+            except Exception as e:
+                self.logger.error('获取商品列表失败', e)
+                return []
+        
+        return []
+
+    async def get_item_container(self, max_retries=3):
+        """获取商品列表容器，带重试机制"""
+        for attempt in range(max_retries):
+            try:
+                container = await self.wait_for_element(self.LOCATORS['item_container'])
+                if container and container.is_displayed():
+                    return container
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(1)
+                continue
+        return None
+
+    async def get_item_title(self, item, max_retries=3):
+        """获取商品标题，带重试机制"""
+        for attempt in range(max_retries):
+            try:
+                if not item.is_displayed():
+                    return None
+                    
+                title_elements = item.find_elements(
+                    by=AppiumBy.CLASS_NAME,
+                    value="android.widget.TextView"
+                )
+                
+                for title_element in title_elements:
+                    if title_element.is_displayed():
+                        title = title_element.text
+                        if title:
+                            return title
+                return None
+                
+            except StaleElementReferenceException:
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(1)
+                continue
+            except Exception as e:
+                self.logger.error('获取商品标题失败', e)
+                return None
+        
+        return None 
