@@ -1,42 +1,49 @@
 from appium import webdriver
 from appium.webdriver.common.appiumby import AppiumBy
 from appium.options.common.base import AppiumOptions
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 import asyncio
 import os
+import random
 
 from utils.logger import Logger
 from config.app_config import XIANYU_PACKAGE, XIANYU_ACTIVITY, SEARCH_CONFIG, APPIUM_CONFIG
 from core.home_page import HomePage
-from core.item_detail import ItemDetail
+from core.pages.detail_page import DetailPage
 
 class XianyuAutomation:
-    def __init__(self):
-        self.driver = None
+    def __init__(self, driver=None):
+        """初始化闲鱼自动化
+        
+        Args:
+            driver: 可选，Appium WebDriver 实例
+        """
+        self.driver = driver
         self.running = True
-        try:
-            Logger.info('初始化自动化配置...')
-            options = AppiumOptions()
-            for key, value in APPIUM_CONFIG['capabilities'].items():
-                options.set_capability(key, value)
-            options.set_capability('appPackage', XIANYU_PACKAGE)
-            options.set_capability('appActivity', XIANYU_ACTIVITY)
-            
-            self.appium_host = os.getenv('APPIUM_HOST', APPIUM_CONFIG['host'])
-            self.appium_port = int(os.getenv('APPIUM_PORT', APPIUM_CONFIG['port']))
-            
-            Logger.info(f'连接 Appium 服务器: http://{self.appium_host}:{self.appium_port}')
-            self.driver = webdriver.Remote(
-                command_executor=f'http://{self.appium_host}:{self.appium_port}',
-                options=options
-            )
-            Logger.success('Appium 连接成功')
-            
-            self.home_page = HomePage(self.driver)
-            self.item_detail = ItemDetail(self.driver)
-            
-        except Exception as e:
-            Logger.error('初始化失败', e)
-            raise
+        
+        if not self.driver:
+            try:
+                Logger.info('初始化 Appium...')
+                options = AppiumOptions()
+                for key, value in APPIUM_CONFIG['capabilities'].items():
+                    options.set_capability(key, value)
+                options.set_capability('appPackage', XIANYU_PACKAGE)
+                options.set_capability('appActivity', XIANYU_ACTIVITY)
+                
+                self.driver = webdriver.Remote(
+                    command_executor='http://localhost:4723',
+                    options=options
+                )
+                Logger.success('Appium 连接成功')
+                
+            except Exception as e:
+                Logger.error('初始化失败', e)
+                raise
+        
+        # 初始化页面对象
+        self.home_page = HomePage(self.driver)
+        self.detail_page = DetailPage(self.driver)
 
     def stop(self):
         """停止自动化任务"""
@@ -74,7 +81,7 @@ class XianyuAutomation:
         if not self.running:
             return
         item.click()
-        await self.item_detail.process_item_detail()
+        await self.process_item_detail()
 
     async def run(self):
         """运行自动化任务"""
@@ -92,4 +99,56 @@ class XianyuAutomation:
         except Exception as error:
             Logger.error('任务执行出错', error)
         finally:
-            await self.cleanup() 
+            await self.cleanup()
+
+    async def wait_for_element(self, by, value: str, timeout: int = 10000):
+        """等待元素加载"""
+        Logger.debug(f'等待元素加载: {value}')
+        try:
+            element = WebDriverWait(self.driver, timeout/1000).until(
+                EC.presence_of_element_located((by, value))
+            )
+            Logger.success(f'元素已加载: {value}')
+            return element
+        except Exception as error:
+            Logger.error(f'等待元素超时: {value}', error)
+            raise
+
+    async def process_item_detail(self):
+        """处理商品详情页"""
+        try:
+            Logger.debug('进入商品详情页')
+            await asyncio.sleep(2)  # 等待页面加载
+            
+            # 执行3-5次滑动
+            scroll_times = random.randint(3, 5)
+            Logger.info(f'计划滑动 {scroll_times} 次')
+            
+            for i in range(scroll_times):
+                try:
+                    await self.detail_page.scroll_page()
+                    Logger.success(f'完成第 {i+1}/{scroll_times} 次滑动')
+                    
+                    # 随机等待1-3秒
+                    wait_time = random.uniform(1, 3)
+                    await asyncio.sleep(wait_time)
+                    
+                except Exception as e:
+                    Logger.error(f'滑动失败: {str(e)}')
+                    continue
+            
+            # 最后停留2-4秒
+            final_wait = random.uniform(2, 4)
+            await asyncio.sleep(final_wait)
+            
+            self.driver.back()
+            Logger.debug('返回列表页')
+            await asyncio.sleep(1)
+            
+            return True
+        except asyncio.CancelledError:
+            Logger.info('详情页处理被取消')
+            return False
+        except Exception as error:
+            Logger.error('处理商品详情页失败', error)
+            return False 

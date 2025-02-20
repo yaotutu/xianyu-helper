@@ -1,4 +1,5 @@
 import asyncio
+import random
 from utils.logger import Logger
 from .base_task import BaseTask
 from core.pages.home_page import HomePage
@@ -15,6 +16,99 @@ class BrowseItemsTask(BaseTask):
     def description(self) -> str:
         return "自动浏览商品详情页，模拟正常用户行为"
     
+    async def ensure_home_page(self):
+        """确保在首页
+        
+        如果在详情页则返回，如果在其他页面则等待进入首页
+        
+        Returns:
+            bool: 是否成功进入首页
+        """
+        try:
+            # 首先检查当前页面
+            current_page = await self.page_factory.get_current_page()
+            
+            # 如果在详情页，返回上一页
+            if isinstance(current_page, DetailPage):
+                Logger.info('当前在详情页，返回首页...')
+                self.driver.back()
+                await asyncio.sleep(2)
+            
+            # 等待进入首页
+            for _ in range(3):  # 最多尝试3次
+                if await self.page_factory.wait_for_page(HomePage, timeout=5):
+                    return True
+                await asyncio.sleep(2)
+            
+            return False
+            
+        except Exception as e:
+            Logger.error('确保首页时出错', e)
+            return False
+
+    async def browse_detail_page(self, detail_page):
+        """浏览详情页
+        
+        Args:
+            detail_page: DetailPage实例
+        """
+        try:
+            Logger.info('===== 开始浏览详情页 =====')
+            Logger.info(f'传入的页面类型: {type(detail_page).__name__}')
+            
+            # 先等待页面加载
+            Logger.info('等待详情页加载...')
+            await asyncio.sleep(2)
+            
+            # 检查是否真的在详情页
+            current_page = await self.page_factory.get_current_page()
+            Logger.info(f'当前页面类型: {type(current_page).__name__}')
+            
+            if not isinstance(current_page, DetailPage):
+                Logger.error('当前不在详情页，跳过浏览')
+                return
+            
+            # 执行3-5次滑动
+            scroll_times = random.randint(3, 5)
+            Logger.info(f'计划滑动 {scroll_times} 次')
+            
+            for i in range(scroll_times):
+                try:
+                    # 滑动页面
+                    Logger.info(f'[{i+1}/{scroll_times}] 准备执行滑动...')
+                    
+                    # 获取滑动前的页面状态
+                    try:
+                        window_size = detail_page.driver.get_window_size()
+                        Logger.debug(f'当前窗口尺寸: {window_size}')
+                    except Exception as e:
+                        Logger.error('获取窗口尺寸失败', e)
+                    
+                    # 执行滑动
+                    await detail_page.scroll_page()
+                    Logger.success(f'[{i+1}/{scroll_times}] 滑动操作执行完成')
+                    
+                    # 随机等待1-3秒
+                    wait_time = random.uniform(1, 3)
+                    Logger.debug(f'等待 {wait_time:.1f} 秒...')
+                    await asyncio.sleep(wait_time)
+                    
+                except Exception as scroll_error:
+                    Logger.error(f'第 {i+1} 次滑动失败: {str(scroll_error)}')
+                    Logger.error(f'错误类型: {type(scroll_error).__name__}')
+                    continue  # 继续下一次滑动
+            
+            # 最后停留2-4秒
+            final_wait = random.uniform(2, 4)
+            Logger.info(f'浏览完成，最后停留 {final_wait:.1f} 秒')
+            await asyncio.sleep(final_wait)
+            Logger.info('===== 详情页浏览结束 =====')
+            
+        except Exception as e:
+            Logger.error('浏览详情页时出错', e)
+            Logger.error(f'错误类型: {type(e).__name__}')
+            Logger.error(f'错误详情: {str(e)}')
+    
     async def run(self):
         """运行任务"""
         try:
@@ -22,8 +116,8 @@ class BrowseItemsTask(BaseTask):
             
             while self.running:
                 try:
-                    # 等待进入首页
-                    if not await self.page_factory.wait_for_page(HomePage, timeout=10):
+                    # 确保在首页
+                    if not await self.ensure_home_page():
                         Logger.warn('未能进入首页，重试中...')
                         await asyncio.sleep(2)
                         continue
@@ -72,13 +166,16 @@ class BrowseItemsTask(BaseTask):
                             
                             # 等待进入详情页
                             if await self.page_factory.wait_for_page(DetailPage, timeout=5):
-                                # 在详情页停留一段时间
-                                await asyncio.sleep(5)
+                                detail_page = await self.page_factory.get_current_page()
+                                if isinstance(detail_page, DetailPage):
+                                    # 浏览详情页
+                                    await self.browse_detail_page(detail_page)
                                 # 返回首页
                                 self.driver.back()
                                 await asyncio.sleep(2)
-                                # 重新获取首页
-                                await self.page_factory.wait_for_page(HomePage, timeout=5)
+                                # 确保返回到首页
+                                if not await self.ensure_home_page():
+                                    break
                             
                         except Exception as e:
                             Logger.error('处理商品时出错', e)
