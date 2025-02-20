@@ -16,46 +16,19 @@ class DetailPage(BasePage):
         'want_item': (AppiumBy.XPATH, "//android.view.View[@content-desc='我想要, 我想要']")
     }
 
-    async def scroll_page(self):
-        """滚动页面"""
-        try:
-            Logger.debug('===== 开始执行详情页滑动 =====')
-            
-            # 获取窗口尺寸
-            Logger.debug('获取窗口尺寸...')
-            window_size = self.driver.get_window_size()
-            width = window_size['width']
-            height = window_size['height']
-            Logger.debug(f'窗口尺寸: 宽={width}, 高={height}')
-            
-            # 计算滑动参数
-            start_x = width * 0.5
-            start_y = height * 0.8
-            end_x = width * 0.5
-            end_y = height * 0.2
-            
-            Logger.debug(f'滑动参数: 从 ({start_x:.0f}, {start_y:.0f}) 到 ({end_x:.0f}, {end_y:.0f})')
-            Logger.debug('开始执行滑动操作...')
-            
-            # 执行滑动
-            try:
-                self.driver.swipe(start_x, start_y, end_x, end_y, 1500)
-                Logger.success('滑动操作执行成功')
-            except Exception as swipe_error:
-                Logger.error(f'滑动操作失败: {str(swipe_error)}')
-                Logger.error(f'错误类型: {type(swipe_error).__name__}')
-                raise
-            
-            # 等待页面稳定
-            Logger.debug('等待页面稳定 (2秒)...')
-            await asyncio.sleep(2)
-            Logger.debug('===== 详情页滑动完成 =====')
-            
-        except Exception as error:
-            Logger.error('详情页滑动失败', error)
-            Logger.error(f'错误类型: {type(error).__name__}')
-            Logger.error(f'错误详情: {str(error)}')
-            raise
+    async def browse_page(self):
+        """浏览详情页"""
+        # 配置详情页的浏览参数
+        scroll_config = {
+            'min_times': 3,      # 最少滑动3次
+            'max_times': 5,      # 最多滑动5次
+            'up_probability': 0.8,  # 80%概率向上滑动
+            'initial_wait': (2, 4),  # 初始等待2-4秒
+            'scroll_wait': (1, 3),   # 每次滑动后等待1-3秒
+            'final_wait': (2, 4)     # 最后等待2-4秒
+        }
+        
+        return await self.simulate_browse(scroll_config)
 
     async def get_item_info(self):
         """获取商品信息"""

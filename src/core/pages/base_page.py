@@ -169,4 +169,88 @@ class BasePage:
             return False
         except Exception as e:
             Logger.error('滑动时出错', e)
+            return False
+
+    async def simulate_browse(self, scroll_config=None):
+        """模拟浏览行为
+        
+        模拟人工浏览页面的行为，包括：
+        - 随机次数的滑动
+        - 随机的滑动方向
+        - 随机的等待时间
+        
+        Args:
+            scroll_config: 滑动配置，可选，包含以下字段：
+                - min_times: 最少滑动次数，默认3
+                - max_times: 最多滑动次数，默认5
+                - up_probability: 向上滑动的概率，默认0.8
+                - initial_wait: (min, max) 初始等待时间范围，默认(2, 4)
+                - scroll_wait: (min, max) 每次滑动后等待时间范围，默认(1, 3)
+                - final_wait: (min, max) 最终等待时间范围，默认(2, 4)
+        
+        Returns:
+            bool: 是否成功完成所有滑动
+        """
+        try:
+            Logger.debug('===== 开始模拟浏览 =====')
+            
+            # 默认配置
+            config = {
+                'min_times': 3,
+                'max_times': 5,
+                'up_probability': 0.8,
+                'initial_wait': (2, 4),
+                'scroll_wait': (1, 3),
+                'final_wait': (2, 4)
+            }
+            
+            # 更新配置
+            if scroll_config:
+                config.update(scroll_config)
+            
+            # 先等待页面加载
+            initial_wait = random.uniform(*config['initial_wait'])
+            Logger.debug(f'初始等待 {initial_wait:.1f} 秒...')
+            await asyncio.sleep(initial_wait)
+            
+            # 执行随机次数的滑动
+            scroll_times = random.randint(config['min_times'], config['max_times'])
+            Logger.info(f'计划滑动 {scroll_times} 次')
+            
+            for i in range(scroll_times):
+                try:
+                    # 随机决定滑动方向
+                    is_scroll_up = random.random() < config['up_probability']
+                    
+                    # 执行滑动
+                    if is_scroll_up:
+                        Logger.debug(f'[{i+1}/{scroll_times}] 向上滑动')
+                        success = await self.scroll_up()
+                    else:
+                        Logger.debug(f'[{i+1}/{scroll_times}] 向下滑动')
+                        success = await self.scroll_down()
+                    
+                    if not success:
+                        Logger.warn('滑动失败，停止模拟')
+                        return False
+                    
+                    # 随机等待
+                    wait_time = random.uniform(*config['scroll_wait'])
+                    Logger.debug(f'等待 {wait_time:.1f} 秒...')
+                    await asyncio.sleep(wait_time)
+                    
+                except Exception as e:
+                    Logger.error(f'第 {i+1} 次滑动失败', e)
+                    continue
+            
+            # 最后停留一会
+            final_wait = random.uniform(*config['final_wait'])
+            Logger.debug(f'最后停留 {final_wait:.1f} 秒...')
+            await asyncio.sleep(final_wait)
+            
+            Logger.debug('===== 模拟浏览完成 =====')
+            return True
+            
+        except Exception as e:
+            Logger.error('模拟浏览失败', e)
             return False 

@@ -120,26 +120,10 @@ class XianyuAutomation:
             Logger.debug('进入商品详情页')
             await asyncio.sleep(2)  # 等待页面加载
             
-            # 执行3-5次滑动
-            scroll_times = random.randint(3, 5)
-            Logger.info(f'计划滑动 {scroll_times} 次')
-            
-            for i in range(scroll_times):
-                try:
-                    await self.detail_page.scroll_page()
-                    Logger.success(f'完成第 {i+1}/{scroll_times} 次滑动')
-                    
-                    # 随机等待1-3秒
-                    wait_time = random.uniform(1, 3)
-                    await asyncio.sleep(wait_time)
-                    
-                except Exception as e:
-                    Logger.error(f'滑动失败: {str(e)}')
-                    continue
-            
-            # 最后停留2-4秒
-            final_wait = random.uniform(2, 4)
-            await asyncio.sleep(final_wait)
+            # 使用DetailPage的浏览方法
+            success = await self.detail_page.browse_page()
+            if not success:
+                Logger.warn('详情页浏览异常')
             
             self.driver.back()
             Logger.debug('返回列表页')
