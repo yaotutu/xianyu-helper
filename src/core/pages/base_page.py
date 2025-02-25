@@ -110,9 +110,9 @@ class BasePage:
             
             # 添加一些随机性
             start_x = width * random.uniform(0.4, 0.6)  # 起点x坐标在屏幕中间附近随机
-            start_y = height * random.uniform(0.2, 0.3)  # 起点y坐标在屏幕上方随机
+            start_y = height * random.uniform(0.7, 0.8)  # 起点y坐标在屏幕下方随机
             end_x = width * random.uniform(0.4, 0.6)    # 终点x坐标在屏幕中间附近随机
-            end_y = height * random.uniform(0.7, 0.8)   # 终点y坐标在屏幕下方随机
+            end_y = height * random.uniform(0.2, 0.3)   # 终点y坐标在屏幕上方随机
             
             # 滑动时间也添加随机性
             duration = random.randint(500, 1500)  # 500-1500毫秒
@@ -147,9 +147,9 @@ class BasePage:
             
             # 添加一些随机性
             start_x = width * random.uniform(0.4, 0.6)  # 起点x坐标在屏幕中间附近随机
-            start_y = height * random.uniform(0.7, 0.8)  # 起点y坐标在屏幕下方随机
+            start_y = height * random.uniform(0.2, 0.3)  # 起点y坐标在屏幕上方随机
             end_x = width * random.uniform(0.4, 0.6)    # 终点x坐标在屏幕中间附近随机
-            end_y = height * random.uniform(0.2, 0.3)   # 终点y坐标在屏幕上方随机
+            end_y = height * random.uniform(0.7, 0.8)   # 终点y坐标在屏幕下方随机
             
             # 滑动时间也添加随机性
             duration = random.randint(500, 1500)  # 500-1500毫秒
